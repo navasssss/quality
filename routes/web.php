@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Artisan;
 
 Route::get('/', function () {
-    return redirect('/panel');
+    return redirect('/admin');
 });
 
 
