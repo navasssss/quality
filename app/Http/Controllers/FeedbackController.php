@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\NegativeFeedbackAlert;
 use App\Models\Feedback;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class FeedbackController extends Controller
@@ -21,9 +23,9 @@ class FeedbackController extends Controller
             'email' => 'required|email|max:255|unique:feedback,email',
             'phone' => 'required|string|max:20',
             'service_date' => 'required|date',
-            'service_type' => ['required','integer', Rule::in(array_keys(Feedback::service_type()))],
+            'service_type' => ['required', 'integer', Rule::in(array_keys(Feedback::service_type()))],
             'job_reference' => 'required|string|max:255',
-            'location' => ['required','integer', Rule::in(array_keys(Feedback::location()))],
+            'location' => ['required', 'integer', Rule::in(array_keys(Feedback::location()))],
             'satisfaction_rating' => 'integer|min:1|max:5',
             'satisfied_aspects' => 'string|max:1000',
             'improvements' => 'required|string|max:1000',
@@ -35,13 +37,17 @@ class FeedbackController extends Controller
             'issue_description' => 'nullable|string|max:1000',
             'issue_resolved' => 'boolean',
             'follow_up_requested' => 'boolean',
-            'preferred_contact_method' => ['required','integer', Rule::in(array_keys(Feedback::preferred_contact_method()))],
+            'preferred_contact_method' => ['required', 'integer', Rule::in(array_keys(Feedback::preferred_contact_method()))],
             'consent' => 'boolean',
             'submitted_on' => 'date',
         ]);
 
         // Store feedback in the database
-        Feedback::create($validatedData);
+        $feedback = Feedback::create($validatedData);
+        if ($feedback->satisfaction_rating <= 2) {
+            Mail::to('rajuaji2008@gmail.com')->queue(new NegativeFeedbackAlert($feedback));
+        }
+
 
         return redirect()->route('feedback.create')->with('success', 'Feedback submitted successfully!');
     }

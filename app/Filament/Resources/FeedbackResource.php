@@ -7,12 +7,17 @@ use App\Filament\Resources\FeedbackResource\RelationManagers;
 use App\Filament\Resources\FeedbackResource\Widgets\FeedbackStats;
 use App\Models\Feedback;
 use Filament\Forms;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
 class FeedbackResource extends Resource
 {
@@ -51,11 +56,11 @@ class FeedbackResource extends Resource
                     ->default(4),
                 Forms\Components\Radio::make('satisfaction_rating')
                     ->options([
-                        1,
-                        2,
-                        3,
-                        4,
-                        5,
+                        1 => 1,
+                        2 => 2,
+                        3 => 3,
+                        4 => 4,
+                        5 => 5,
 
                     ])
                     ->required(),
@@ -165,22 +170,66 @@ class FeedbackResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: false),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Filter::make('created_at')
+                    ->label('Submiited Date')
+                    ->form([
+                        DatePicker::make('from')->label('From'),
+                        DatePicker::make('until')->label('To'),
+                    ])
+                    ->query(function ($query, array $data) {
+                        return $query
+                            ->when($data['from'], fn($q) => $q->whereDate('created_at', '>=', $data['from']))
+                            ->when($data['until'], fn($q) => $q->whereDate('created_at', '<=', $data['until']));
+                    }),
+                SelectFilter::make('issues_reported')
+                    ->label('Complaints')
+                    ->options([
+                        true => 'Yes',
+                        false => 'No',
+                    ]),
+
+                // Filter::make('created_at')
+                //     ->label('Service Date')
+                //     ->form([
+                //         DatePicker::make('from')->label('From'),
+                //         DatePicker::make('until')->label('To'),
+                //     ])
+                //     ->query(function ($query, array $data) {
+                //         return $query
+                //             ->when($data['from'], fn($q) => $q->whereDate('created_at', '>=', $data['from']))
+                //             ->when($data['until'], fn($q) => $q->whereDate('created_at', '<=', $data['until']));
+                //     }),
+                SelectFilter::make('satisfaction_rating')
+                    ->label('Satisfaction')
+                    ->options([
+                        1 => 'Very Poor',
+                        2 => 'Poor',
+                        3 => 'Average',
+                        4 => 'Good',
+                        5 => 'Excellent',
+                    ]),
+                SelectFilter::make('status')
+                    ->label('Status')
+                    ->options(Feedback::status())
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\ViewAction::make(),
             ])
+            ->headerActions([
+                ExportAction::make()
+            ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    ExportBulkAction::make()
                 ]),
             ]);
     }
